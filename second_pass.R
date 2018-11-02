@@ -34,34 +34,33 @@ streets <- read_sf('Data/streets/Streets.shp')
 names(streets$geometry) <- NULL
 sig_int <- read_sf('Data/signalized_intersections/atsacint_base.shp', crs=4326)
 
-# Roll up into summary volumes
+# testing
 volume <- volume_raw %>%
-  group_by(LON, LAT) %>%
-  summarize(vol = sum(VOL),
-            angle = max(ANGLE)) %>%
-  mutate(vol = toString(vol)) %>%
-  st_as_sf(coords = c('LON', 'LAT'), crs=4326)
+  group_by(LON, LAT, lubridate::hour(END_TIME)) %>%
+  summarise(hourlyVol = sum(VOL))
+
+# Roll up into summary volumes
+
+volumeR <- volume_raw %>%
+  mutate(id = paste0(LON, LAT)) %>%
+  group_by(id, LON, LAT, lubridate::hour(END_TIME)) %>%
+  summarise(hourlyVol = sum(VOL))
 
 # Get nearest streets to each detector point
-nearest_street_id <- st_nearest_feature(volume, streets)
+nearest_street_id <- st_nearest_feature(detectors, streets)
 nearest_streets <- streets[nearest_street_id,]
 
 # Filter only those signalized intersections near each point
-volume_nad83 <- st_transform(volume, 2229) # Convert to NAD83
-volume_buff_nad83 <- st_buffer(volume_nad83, 2000) # Buffer 2k ft
-volume_buff <- st_union(st_transform(volume_buff_nad83, 4326)) # Convert back to wgs84
-colorChoices <- c("red", "darkred", "lightred", "orange", "beige", "green", "darkgreen", "lightgreen", "blue", "darkblue", "lightblue", "purple", "darkpurple", "pink", "cadetblue", "white", "gray", "lightgray", "black")
-sig_int <- rownames_to_column(sig_int[volume_buff,]) %>%
-  rowwise() %>%
-  mutate(mrkrcolor = sample(colorChoices, size=1)) %>%
-  ungroup() %>%
-  st_as_sf()
+detectors_nad83 <- st_transform(detectors, 2229) # Convert to NAD83
+detectors_buff_nad83 <- st_buffer(detectors_nad83, 2000) # Buffer 2k ft
+detectors_buff <- st_union(st_transform(detectors_buff_nad83, 4326)) # Convert back to wgs84
+sig_int <- rownames_to_column(sig_int[detectors_buff,]) 
 
 # Get nearest signal to each detector point
-nearest_sig_id <- st_nearest_feature(volume, sig_int)
+nearest_sig_id <- st_nearest_feature(detectors, sig_int)
 # st_geometry(sig_int) <- NULL
 sig_int_df <- sig_int %>% st_set_geometry(NULL)
-volume <- volume %>%
+detectors <- detectors %>%
   add_column(nearest_sig_id) %>%
   mutate(nearest_sig_id = as.character(nearest_sig_id)) %>%
   left_join(sig_int_df, by = c('nearest_sig_id' = 'rowname' )) %>%
