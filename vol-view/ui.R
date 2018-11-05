@@ -19,12 +19,17 @@ ui <- fluidPage(
                    c("Intersection", "Corridor"),
                    selected = "Intersection", inline = TRUE, width = NULL),
       conditionalPanel(condition="input.type_select == 'Intersection'",
-                       uiOutput("int_select"),
-                       sliderInput("time_slider", label = "Hour Range", min = 0, 
-                                   max = 23, value = c(14, 20)))),
+                       uiOutput("int_select")),
+      conditionalPanel(condition="input.type_select == 'Corridor'",
+                       uiOutput("corridor_select1")),
+      conditionalPanel(condition="input.type_select == 'Corridor'",
+                       uiOutput("corridor_select2")), 
+      dateInput("date", label="Date", value=as.Date("2017-09-22")),
+      sliderInput("time_slider", label = "Hour Range", min = 0, 
+                  max = 23, value = c(14, 20))),
     mainPanel(
       # Map Output
-      leafletOutput("map"),
+      leafletOutput("map", height=300),
       plotOutput("volPlot"))))
   
 
